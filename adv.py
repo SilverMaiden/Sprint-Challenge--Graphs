@@ -24,12 +24,8 @@ def breadthFirstSearch(graph, starting_vertex):
 
 
     queue = Queue()
-
-    paths = []
     seenBefore = set()
-
     queue.enqueue([starting_vertex])
-
     while queue.size() > 0:
         current = queue.dequeue()
         print("current is ", current)
@@ -53,23 +49,26 @@ def get_neighbors(graph, room):
 
 def nearest_unexplored_room(graph, room):
     unexplored_room_path = breadthFirstSearch(graph, room)
-
+    print("path is ", unexplored_room_path)
     #need to convert into useable direction format
 
     path = []
 
-    myList = []
-
-    for i, each in enum(unexplored_room_path):
-        possible_directions = graph[each].items()
-
-        for direction in possible_directions:
-            if direction[1] == unexplored_room_path[i + 1]:
-                path.append(direction[0])
+    for i in range(0, len(unexplored_room_path) - 1):
+        #print("this is", graph[unexplored_room_path[i]])
+        graph_list = list(graph[unexplored_room_path[i]].items())
+        #print(graph_list)
+        for each in graph_list:
+            if each[1] == unexplored_room_path[i+1]:
+                path.append(each[0])
     return path
 
 
-
+def unexplored_exit(value):
+    if value == '?':
+        return True
+    else:
+        return False
 
 def create_path():
     player = Player(world.starting_room)
@@ -77,46 +76,80 @@ def create_path():
     stack = Stack()
     traversal_path = []
     graph = {}
-
-    graph[player.current_room.id] =  {}
-    #seenBefore.add(player.current_room.id)
-
-    stack.push(player.current_room)
-
-    while len(seenBefore) < len(graph):
-        current_room = stack.pop()
-        if current_room.id not in seenBefore:
-            seenBefore.add(current_room.id)
-            current_room_exits = current_room.id.get_exits()
-
-            for each in current_room_exits:
-                graph[current_room.id][each] = '?'
-        else:
-            next_room = nearest_unexplored_room(graph, current_room)
+    opposites = {'n': 's', 's':'n', 'w':'e', 'e': 'w'}
 
 
-    #Go south if possible, depth first
+    graph[player.current_room.id] = {}
 
-        if SOUTH_KEY in current_room_exits:
-            next_direction = SOUTH_KEY
-            next_room = current_room.s_to()
-        else:
-            next_direction = current_room_exits[chooseDirection(current_room_exits)]
-            if next_direction == 'n':
-                next_room = current_room.n_to()
-            elif next_direction == 'e':
-                next_room = current_room.e_to()
-            elif next_direction == 'w':
-                next_room = current_room.w_to()
-        traversal_path.append(next_direction)
-        stack.push(next_room)
-
+    current_exits = player.current_room.get_exits()
+    for each in current_exits:
+        graph[player.current_room.id][each] = '?'
+    
+    unexplored_directions = [entry[0] for entry in list(
+        graph[player.current_room.id].items()) if entry[1] == '?']
     
 
+    if SOUTH_KEY in unexplored_directions:
+        move_direction = SOUTH_KEY
+    else:
+        move_direction = unexplored_directions[chooseDirection(unexplored_directions)]
 
-        # else:
-        #     through_exit_room_id = player.current_room.get_room_in_direction(each)
-        #     graph[player.current_room.id][each] = through_exit_room_id
+
+    stack.push(move_direction)
+
+    while len(seenBefore) < len(graph):
+        current_move = stack.pop()
+        prev_room = player.current_room.id
+        traversal_path.append(current_move)
+        player.travel(current_move)
+
+        current_exits = player.current_room.get_exits()
+        #print(current_exits)
+
+        if player.current_room.id not in seenBefore:
+            graph[player.current_room.id] = {}
+            print("current room exits r", current_exits)
+            for each in current_exits:
+                graph[player.current_room.id][each] = '?'
+            seenBefore.add(player.current_room.id)
+            
+        opposite_direction = opposites[current_move]
+        graph[player.current_room.id][opposite_direction] = prev_room
+        graph[prev_room][current_move] = player.current_room.id
+        print("prev room id", graph[player.current_room.id][opposite_direction])
+            
+        unexplored_exits = []
+        current_directions = graph[player.current_room.id].items()
+        for each in current_directions:
+            if unexplored_exit(each[1]):
+                unexplored_exits.append(each[0])
+
+        print("unexplored directions are ", unexplored_exits)
+        if len(unexplored_exits) > 0:
+            if SOUTH_KEY in unexplored_exits :
+                move_direction = SOUTH_KEY
+            else:
+                move_direction = unexplored_exits[chooseDirection(unexplored_exits)]
+            stack.push(move_direction)
+            print("move direction is ", move_direction)
+        elif len(seenBefore) == len(graph):
+            return traversal_path
+        else:
+            next_room_path = nearest_unexplored_room(graph, player.current_room.id)
+            print("next pathway is", next_room_path)
+            player.travel(next_room_path[0])
+            print(player.current_room.get_exits())
+
+            traversal_path.append(next_room_path[0])
+
+            seenBefore.add(player.current_room.id)
+            stack.push(next_room_path[-1])
+
+    return traversal_path
+
+
+        
+
 
 
 def chooseDirection(directionsList):
@@ -147,12 +180,12 @@ player = Player(world.starting_room)
 
 # Fill this out with directions to walk
 # traversal_path = ['n', 'n']
-traversal_path = []
+#traversal_path = []
 
 
 
 
-
+traversal_path = create_path()
 # TRAVERSAL TEST - DO NOT MODIFY
 visited_rooms = set()
 player.current_room = world.starting_room
