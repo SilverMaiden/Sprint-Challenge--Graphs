@@ -28,7 +28,7 @@ def breadthFirstSearch(graph, starting_vertex):
     queue.enqueue([starting_vertex])
     while queue.size() > 0:
         current = queue.dequeue()
-        print("current is ", current)
+        # print("current is ", current)
         last_vertex = current[-1]
 
         if last_vertex not in seenBefore:
@@ -49,7 +49,9 @@ def get_neighbors(graph, room):
 
 def nearest_unexplored_room(graph, room):
     unexplored_room_path = breadthFirstSearch(graph, room)
-    print("path is ", unexplored_room_path)
+    if unexplored_room_path is None:
+        return None
+    # print("path of ids is ", unexplored_room_path)
     #need to convert into useable direction format
 
     path = []
@@ -57,9 +59,10 @@ def nearest_unexplored_room(graph, room):
     for i in range(0, len(unexplored_room_path) - 1):
         #print("this is", graph[unexplored_room_path[i]])
         graph_list = list(graph[unexplored_room_path[i]].items())
-        #print(graph_list)
+        # print("graph list is ", graph_list)
         for each in graph_list:
-            if each[1] == unexplored_room_path[i+1]:
+            if each[1] == unexplored_room_path[i+1] and each[1] != '?':
+                # print("each: ", each[1], "item: ", unexplored_room_path[i+1])
                 path.append(each[0])
     return path
 
@@ -97,10 +100,11 @@ def create_path():
 
     stack.push(move_direction)
 
-    while len(seenBefore) < len(graph):
+    while stack.size() > 0:
         current_move = stack.pop()
         prev_room = player.current_room.id
         traversal_path.append(current_move)
+        # print("traversal path is currently:", traversal_path)
         player.travel(current_move)
 
         current_exits = player.current_room.get_exits()
@@ -108,7 +112,7 @@ def create_path():
 
         if player.current_room.id not in seenBefore:
             graph[player.current_room.id] = {}
-            print("current room exits r", current_exits)
+            # print("current room exits r", current_exits)
             for each in current_exits:
                 graph[player.current_room.id][each] = '?'
             seenBefore.add(player.current_room.id)
@@ -116,7 +120,8 @@ def create_path():
         opposite_direction = opposites[current_move]
         graph[player.current_room.id][opposite_direction] = prev_room
         graph[prev_room][current_move] = player.current_room.id
-        print("prev room id", graph[player.current_room.id][opposite_direction])
+        # print("prev room id", graph[player.current_room.id][opposite_direction])
+        # print("current room id", player.current_room.id)
             
         unexplored_exits = []
         current_directions = graph[player.current_room.id].items()
@@ -124,25 +129,26 @@ def create_path():
             if unexplored_exit(each[1]):
                 unexplored_exits.append(each[0])
 
-        print("unexplored directions are ", unexplored_exits)
+        # print("unexplored directions are ", unexplored_exits)
         if len(unexplored_exits) > 0:
-            if SOUTH_KEY in unexplored_exits :
+            if SOUTH_KEY in unexplored_exits:
                 move_direction = SOUTH_KEY
             else:
                 move_direction = unexplored_exits[chooseDirection(unexplored_exits)]
             stack.push(move_direction)
-            print("move direction is ", move_direction)
-        elif len(seenBefore) == len(graph):
-            return traversal_path
+            # print("move direction is ", move_direction)
         else:
             next_room_path = nearest_unexplored_room(graph, player.current_room.id)
-            print("next pathway is", next_room_path)
-            player.travel(next_room_path[0])
-            print(player.current_room.get_exits())
+            # print("current room exits r", current_exits)
+            if next_room_path is None: 
+                return traversal_path
 
-            traversal_path.append(next_room_path[0])
-
-            seenBefore.add(player.current_room.id)
+            # print("next pathway is", next_room_path)
+            for i in range(0, len(next_room_path)-1):
+                player.travel(next_room_path[i])
+                # print(player.current_room.get_exits())
+                traversal_path.append(next_room_path[i])
+                seenBefore.add(player.current_room.id)
             stack.push(next_room_path[-1])
 
     return traversal_path
